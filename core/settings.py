@@ -30,7 +30,7 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
-# Application definition
+# core/settings.py
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -42,16 +42,48 @@ INSTALLED_APPS = [
     'userauth',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
+    'csp',  # Added a comma here
+    'drf_yasg',  # Correctly separated as a new entry
 ]
 
-# core/settings.py
+# Additional installed apps
 INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'mail_admins': {
+            'level': 'WARNING',  # Set the minimum level to trigger email alerts
+            'class': 'django.utils.log.AdminEmailHandler',
+            'include_html': True,
+        },
+    },
+    'loggers': {
+        'django.security': {
+            'handlers': ['mail_admins'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+    'ADMINS': [('Admin', 'admin@example.com')],  # Replace with your recipient email
+}
 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '10/minute',     
+        'anon': '5/minute',
+        'login': '3/minute',       
+    }
 }
 
 MIDDLEWARE = [
@@ -62,6 +94,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -112,6 +145,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'max_similarity': 0.7,  # Avoid passwords similar to user attributes
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,  # Require a minimum length of 8 characters
+        }
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    }
 ]
 
 
@@ -147,6 +198,15 @@ SIMPLE_JWT = {
 }
 
 # core/settings.py
+SITE_URL = 'http://127.0.0.1:8000'
+CORS_ALLOWED_ORIGINS = [
+    'https://your-frontend-domain.com',  # Replace with your frontend domain
+    'http://localhost:3000',  # For local development with Next.js
+]
+
+CORS_ALLOW_CREDENTIALS = True  # Allows cookies to be included in cross-origin requests
+
+# core/settings.py
 #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.example.com'  # Replace with your email provider’s SMTP server
@@ -156,3 +216,22 @@ EMAIL_HOST_USER = 'your-email@example.com'  # Your email address
 EMAIL_HOST_PASSWORD = 'your-email-password'  # Your email password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+#security 
+# 1. X-Content-Type-Options Header
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Prevents browsers from MIME-sniffing
+
+# 2. X-Frame-Options Header
+X_FRAME_OPTIONS = 'DENY'  # Prevents clickjacking by disallowing your site in iframes
+
+# 3. X-XSS-Protection Header
+SECURE_BROWSER_XSS_FILTER = True  # Enables XSS filtering in browsers
+
+# 4. HSTS (HTTP Strict Transport Security) - Optional but recommended for HTTPS
+SECURE_HSTS_SECONDS = 31536000  # Sets HSTS for one year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True  # Applies HSTS to subdomains
+SECURE_HSTS_PRELOAD = True  # Allows preloading in browsers (optional)
+
+# Define CSP directives
+CSP_DEFAULT_SRC = ("'self'",)  # Only load content from the same origin
+CSP_SCRIPT_SRC = ("'self'", 'https://trusted-scripts.com')  # Allow scripts from trusted sources
+CSP_STYLE_SRC = ("'self'", 'https://trusted-styles.com')  # Allow styles from trusted sources
