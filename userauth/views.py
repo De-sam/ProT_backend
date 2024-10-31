@@ -52,6 +52,7 @@ class CustomLoginView(TokenObtainPairView):
                 return Response({
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
+                    "role": user.role  # Include role for frontend redirection
                 }, status=status.HTTP_200_OK)
 
             # Log and respond if the password is incorrect
@@ -68,7 +69,6 @@ class CustomLoginView(TokenObtainPairView):
                 {"detail": _("Invalid credentials or account does not exist.")},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-
 
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
@@ -137,11 +137,12 @@ class RegisterView(APIView):
             refresh = RefreshToken.for_user(user)
             return Response({
                 "message": "User created successfully. Please check your email to activate your account.",
+                "role": user.role,
+                "customer_id": user.customer_id if user.role == CustomUser.CUSTOMER else None,
                 "refresh": str(refresh),
                 "access": str(refresh.access_token)
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class AccountActivationView(APIView):
     def get(self, request, uidb64, token):
@@ -170,3 +171,29 @@ class LogoutView(APIView):
             return Response({"message": "User logged out successfully"}, status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class AddCustomerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Check that the requesting user is a tailor
+        if request.user.role != CustomUser.TAILOR:
+            return Response({"detail": "Only tailors can add customers."}, status=status.HTTP_403_FORBIDDEN)
+
+        customer_id = request.data.get('customer_id')
+        if not customer_id:
+            return Response({"detail": "Customer ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Find the customer by customer ID
+            customer = CustomUser.objects.get(customer_id=customer_id, role=CustomUser.CUSTOMER)
+            
+            # Add customer to the tailor's list if not already added
+            if customer in request.user.customers.all():
+                return Response({"detail": "Customer is already added."}, status=status.HTTP_400_BAD_REQUEST)
+
+            request.user.customers.add(customer)
+            return Response({"message": "Customer added successfully."}, status=status.HTTP_200_OK)
+
+        except CustomUser.DoesNotExist:
+            return Response({"detail": "Customer with this ID does not exist."}, status=status.HTTP_404_NOT_FOUND)

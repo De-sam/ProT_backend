@@ -2,7 +2,7 @@
 from django.urls import path
 from .views import (
     RegisterView, LogoutView, PasswordResetRequestView, PasswordResetConfirmView,
-    ProtectedView, AccountActivationView,CustomLoginView
+    ProtectedView, AccountActivationView,CustomLoginView,AddCustomerView
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -15,4 +15,5 @@ urlpatterns = [
     path('activate/<uidb64>/<token>/', AccountActivationView.as_view(), name='account_activation'),
     path('profile/', ProtectedView.as_view(), name='profile'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('add-customer/', AddCustomerView.as_view(), name='add_customer'),
 ]
