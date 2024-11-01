@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+# core/settings.py
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -40,12 +41,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'userauth',
+    'tailoring',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'csp',  # Added a comma here
     'drf_yasg',  # Correctly separated as a new entry
 ]
+
+
 
 # Additional installed apps
 INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
@@ -182,6 +186,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Media files settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
