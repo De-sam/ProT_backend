@@ -101,6 +101,20 @@ SIMPLE_JWT = {
 # core/settings.py
 SITE_URL = "http://localhost:8000"  # Use the correct base URL for your application
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '10/minute',     
+        'anon': '5/minute',
+        'login': '3/minute',       
+    }
+}
 
 # CORS Settings
 CORS_ALLOWED_ORIGINS = [
