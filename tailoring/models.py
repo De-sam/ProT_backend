@@ -1,7 +1,10 @@
-# tailoring/models.py
 from django.db import models
 from django.core.exceptions import ValidationError
 from userauth.models import CustomUser  # Import the CustomUser model
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Design(models.Model):
     name = models.CharField(max_length=100)
@@ -13,6 +16,30 @@ class Design(models.Model):
     def __str__(self):
         return f"{self.name} by {self.tailor}"
 
+    def save(self, *args, **kwargs):
+        logger.info(f"Design {self.name} saved")
+        super().save(*args, **kwargs)
+
+
+class Order(models.Model):
+    customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders')
+    design = models.ForeignKey(Design, on_delete=models.CASCADE, related_name='orders')
+    order_date = models.DateTimeField(auto_now_add=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    transaction_id = models.CharField(max_length=64, unique=True, blank=True, null=True)
+    payment_status = models.CharField(
+        max_length=10,
+        choices=[('PENDING', 'Pending'), ('CONFIRMED', 'Confirmed')],
+        default='PENDING'
+    )
+
+    def __str__(self):
+        return f"Order {self.id} by {self.customer} for {self.design.name}"
+
+    def save(self, *args, **kwargs):
+        logger.info(f"Order {self.id} saved")
+        super().save(*args, **kwargs)
+
 
 class MeasurementCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -20,6 +47,11 @@ class MeasurementCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        logger.info(f"Measurement category {self.name} saved")
+        super().save(*args, **kwargs)
+
 
 class Measurement(models.Model):
     customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='measurements')
@@ -75,5 +107,10 @@ class Measurement(models.Model):
             ]):
                 raise ValidationError("Male-specific measurements are not applicable for female customers.")
 
+    def save(self, *args, **kwargs):
+        logger.info(f"Measurement for {self.customer} saved")
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.category.name} measurements for {self.customer} on {self.date_taken}"
+    

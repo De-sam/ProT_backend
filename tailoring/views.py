@@ -75,3 +75,72 @@ class DesignListView(APIView):
 
         serializer = DesignSerializer(designs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class OrderCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, design_id):
+        customer = request.user
+        if customer.role != CustomUser.CUSTOMER:
+            return Response({"detail": "Only customers can place orders."}, status=status.HTTP_403_FORBIDDEN)
+
+        design = get_object_or_404(Design, id=design_id)
+        amount = design.price
+
+        order = Order.objects.create(
+            customer=customer,
+            design=design,
+            amount=amount,
+            payment_status="PENDING"  # Default payment status
+        )
+
+        return Response({
+            "message": "Order created successfully.",
+            "order_id": order.id,
+            "amount": order.amount,
+            "design": design.name,
+            "tailor": design.tailor.first_name,
+            "payment_status": order.payment_status,
+        }, status=status.HTTP_201_CREATED)
+
+
+class OrderListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role == CustomUser.CUSTOMER:
+            orders = Order.objects.filter(customer=user)
+        elif user.role == CustomUser.TAILOR:
+            orders = Order.objects.filter(design__tailor=user)
+        else:
+            return Response({"detail": "Invalid user role."}, status=status.HTTP_400_BAD_REQUEST)
+
+        orders_data = [
+            {
+                "order_id": order.id,
+                "design_name": order.design.name,
+                "customer_name": order.customer.first_name,
+                "order_date": order.order_date,
+                "amount": order.amount,
+                "payment_status": order.payment_status,
+                "transaction_id": order.transaction_id,
+            }
+            for order in orders
+        ]
+        return Response(orders_data, status=status.HTTP_200_OK)
+
+
+class OrderConfirmView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        tailor = request.user
+        if tailor.role != CustomUser.TAILOR:
+            return Response({"detail": "Only tailors can confirm orders."}, status=status.HTTP_403_FORBIDDEN)
+
+        order = get_object_or_404(Order, id=order_id, design__tailor=tailor)
+        order.payment_status = "CONFIRMED"
+        order.save()
+
+        return Response({"message": "Order confirmed successfully."}, status=status.HTTP_200_OK)    

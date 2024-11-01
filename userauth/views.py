@@ -33,10 +33,7 @@ class CustomLoginView(TokenObtainPairView):
         password = request.data.get("password")
 
         try:
-            # Check if user exists with the provided email
             user = CustomUser.objects.get(email=email)
-
-            # Log and inform the user if the account is not active
             if not user.is_active:
                 logger.warning(f"Inactive login attempt: {email} at {timezone.now()}")
                 return Response(
@@ -44,7 +41,6 @@ class CustomLoginView(TokenObtainPairView):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            # Authenticate the user (password check)
             user = authenticate(request, email=email, password=password)
             if user is not None:
                 logger.info(f"Successful login: {email} at {timezone.now()}")
@@ -52,23 +48,15 @@ class CustomLoginView(TokenObtainPairView):
                 return Response({
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
-                    "role": user.role  # Include role for frontend redirection
+                    "role": user.role
                 }, status=status.HTTP_200_OK)
 
-            # Log and respond if the password is incorrect
             logger.warning(f"Failed login attempt (incorrect password): {email} at {timezone.now()}")
-            return Response(
-                {"detail": _("Invalid credentials.")},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"detail": _("Invalid credentials.")}, status=status.HTTP_401_UNAUTHORIZED)
 
         except CustomUser.DoesNotExist:
-            # Log and respond if no user is found with the provided email
             logger.warning(f"Failed login attempt (nonexistent account): {email} at {timezone.now()}")
-            return Response(
-                {"detail": _("Invalid credentials or account does not exist.")},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"detail": _("Invalid credentials or account does not exist.")}, status=status.HTTP_401_UNAUTHORIZED)
 
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
@@ -140,7 +128,9 @@ class RegisterView(APIView):
                 "role": user.role,
                 "customer_id": user.customer_id if user.role == CustomUser.CUSTOMER else None,
                 "refresh": str(refresh),
-                "access": str(refresh.access_token)
+                "access": str(refresh.access_token),
+                "wallet_address": user.wallet_address,
+                "mnemonic_phrase": user.algorand_private_key  # Send the mnemonic phrase in the response
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -158,7 +148,6 @@ class AccountActivationView(APIView):
             return Response({"message": "Account activated successfully"}, status=status.HTTP_200_OK)
         
         return Response({"error": "Activation link is invalid!"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class LogoutView(APIView):
     permission_classes = (IsAuthenticated,)

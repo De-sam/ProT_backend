@@ -1,14 +1,22 @@
 # userauth/models.py
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 import random
 import string
+from algosdk import account, mnemonic
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
+
+        # Generate Algorand account for the user
+        private_key, address = account.generate_account()
+        extra_fields['wallet_address'] = address
+        extra_fields['algorand_private_key'] = private_key
+
         user = self.model(email=email, first_name=first_name, last_name=last_name, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -59,6 +67,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         null=True,
         help_text="Unique identifier for customers, 6 characters."
     )
+    wallet_address = models.CharField(
+        max_length=58,
+        blank=True,
+        null=True,
+        help_text="Algorand wallet address for transactions."
+    )
+    algorand_private_key = models.TextField(blank=True, null=True, help_text="Algorand private key, securely stored.")
     customers = models.ManyToManyField(
         'self',
         symmetrical=False,
@@ -79,6 +94,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         # Generate a 6-character unique customer_id only for customers if not already set
         if self.role == self.CUSTOMER and not self.customer_id:
             self.customer_id = self.generate_customer_id()
+
+        # Generate Algorand account if wallet details are missing
+        if not self.wallet_address or not self.algorand_private_key:
+            private_key, address = account.generate_account()
+            self.wallet_address = address
+            self.algorand_private_key = private_key
+
         super().save(*args, **kwargs)
 
     @staticmethod
