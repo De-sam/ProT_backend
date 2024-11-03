@@ -26,6 +26,9 @@ class Order(models.Model):
     design = models.ForeignKey(Design, on_delete=models.CASCADE, related_name='orders')
     order_date = models.DateTimeField(auto_now_add=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    escrow_address = models.CharField(max_length=58, blank=True, null=True)  # Smart contract address
+    asa_id = models.PositiveIntegerField(null=True, blank=True)  # ASA Token ID
+    is_released = models.BooleanField(default=False)  # Payment release flag
     transaction_id = models.CharField(max_length=64, unique=True, blank=True, null=True)
     payment_status = models.CharField(
         max_length=10,
@@ -35,7 +38,7 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} by {self.customer} for {self.design.name}"
-
+    
     def save(self, *args, **kwargs):
         logger.info(f"Order {self.id} saved")
         super().save(*args, **kwargs)
@@ -113,4 +116,3 @@ class Measurement(models.Model):
 
     def __str__(self):
         return f"{self.category.name} measurements for {self.customer} on {self.date_taken}"
-    
