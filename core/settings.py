@@ -204,3 +204,5 @@ LOGGING = {
 
 # Custom User Model
 AUTH_USER_MODEL = 'userauth.CustomUser'
+# In settings.py or environment variables
+ALGOD_APP_ID = 1013

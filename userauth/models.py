@@ -1,10 +1,22 @@
-# userauth/models.py
-
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 import random
 import string
 from algosdk import account, mnemonic
+from algosdk.v2client import algod
+from algosdk.transaction import PaymentTxn
+import time
+
+# Algod client setup
+ALGOD_ADDRESS = 'http://localhost:4001'  # Adjust as per sandbox setup
+ALGOD_TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'  # Sandbox default
+
+algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ADDRESS)
+
+# Sandbox test account details with mnemonic
+SENDER_ADDRESS = "CFJYTKAYUAQJJY4BO3ZBBS6JZSZCYW36GOYZIJR5RSZQZIWYOBXVA5OBDI"
+SENDER_MNEMONIC = "reward abandon essence globe velvet leaf barely olympic margin wasp portion bonus fine call job typical vintage neutral dumb salute test lens render absorb axis"
+SENDER_PRIVATE_KEY = mnemonic.to_private_key(SENDER_MNEMONIC)
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password=None, **extra_fields):
@@ -20,6 +32,9 @@ class CustomUserManager(BaseUserManager):
         user = self.model(email=email, first_name=first_name, last_name=last_name, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
+
+        # Automatically transfer 1000 microAlgos to the new account
+        self._fund_new_account(address)
         return user
 
     def create_superuser(self, email, first_name, last_name, password=None, **extra_fields):
@@ -32,6 +47,39 @@ class CustomUserManager(BaseUserManager):
             raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, first_name, last_name, password, **extra_fields)
+
+    def _fund_new_account(self, receiver_address):
+        # Set up a payment transaction
+        params = algod_client.suggested_params()
+        transaction = PaymentTxn(
+            sender=SENDER_ADDRESS,
+            sp=params,
+            receiver=receiver_address,
+            amt=1000  # 1000 microAlgos = 0.001 Algos
+        )
+
+        # Sign and send the transaction
+        signed_txn = transaction.sign(SENDER_PRIVATE_KEY)
+        txid = algod_client.send_transaction(signed_txn)
+        print(f"Transaction sent with txID: {txid}")
+
+        # Wait for confirmation
+        try:
+            confirmed_txn = self._wait_for_confirmation(txid)
+            print("Transaction confirmed in round:", confirmed_txn.get('confirmed-round', ""))
+        except Exception as e:
+            print(f"Error confirming transaction: {e}")
+
+    def _wait_for_confirmation(self, txid):
+        """Utility function to wait until the transaction is confirmed."""
+        last_round = algod_client.status().get('last-round')
+        while True:
+            txinfo = algod_client.pending_transaction_info(txid)
+            if txinfo.get('confirmed-round', 0) > 0:
+                return txinfo
+            print("Waiting for confirmation...")
+            last_round += 1
+            algod_client.status_after_block(last_round)
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     TAILOR = 'TAILOR'
