@@ -1,9 +1,8 @@
-Here’s an updated version of the `README.md` to ensure it’s optimized for GitHub display, with clear headings, organized sections, and improved formatting for readability.
 
-```markdown
+
 # Tailoring and User Authentication API Documentation
 
-This document provides an overview of all available API endpoints for the tailoring and user authentication system, with example integrations for a Next.js frontend.
+This document provides an overview of all available API endpoints for the tailoring and user authentication system, along with Next.js examples for frontend integration.
 
 ## Table of Contents
 
@@ -313,7 +312,3 @@ async function confirmOrder(orderId) {
 }
 ```
 
----
-
-This README structure ensures a clean and organized layout on GitHub, with clear headings and markdown formatting that is easy to follow. Each section and code block provides just enough detail to help developers integrate and use each endpoint effectively.
-```
