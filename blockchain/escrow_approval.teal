@@ -1,0 +1,24 @@
+#pragma version 2
+txna ApplicationArgs 0
+byte "release"
+==
+txn Sender
+addr CFJYTKAYUAQJJY4BO3ZBBS6JZSZCYW36GOYZIJR5RSZQZIWYOBXVA5OBDI
+==
+&&
+bnz main_l4
+txna ApplicationArgs 0
+byte "refund"
+==
+txn Sender
+addr H52NV44MLLK3R4G7OYKW62XYH453ZGRFIJTIXPKB73DHD6ZEBRVNYU4BJI
+==
+&&
+bnz main_l3
+err
+main_l3:
+int 1
+return
+main_l4:
+int 1
+return
