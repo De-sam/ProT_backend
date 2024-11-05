@@ -10,6 +10,8 @@ from algosdk.transaction import ApplicationNoOpTxn
 from .models import Measurement, MeasurementCategory, Design, Order
 from .serializers import MeasurementSerializer, DesignSerializer, TailorSerializer
 from userauth.models import CustomUser
+import logging
+logger = logging.getLogger(__name__)
 
 # Algorand client setup
 ALGOD_ADDRESS = "http://localhost:4001"  # Adjust for sandbox
@@ -17,12 +19,24 @@ ALGOD_TOKEN = "a" * 64  # Sandbox token
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ADDRESS)
 CREATOR_MNEMONIC = "reward abandon essence globe velvet leaf barely olympic margin wasp portion bonus fine call job typical vintage neutral dumb salute test lens render absorb axis"
 
+{
+  "first_name": "Alice",
+  "last_name": "Johnson",
+  "email": "alicej@example.com",
+  "password1": "SecurePassword@123",  
+  "password2": "SecurePassword@123",  
+  "role": "CUSTOMER"  
+}
+
+
+
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
 
+        # Basic user profile data
         user_profile = {
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -31,21 +45,44 @@ class UserProfileView(APIView):
             "role": user.role,
         }
 
-        try:
-            account_info = algod_client.account_info(user.wallet_address)
-            balance = account_info.get("amount", 0) / 1_000_000
-            user_profile["balance"] = balance
+        # Print statements for debugging
+        print("Fetching user profile data...")
+        print("User email:", user.email)
+        print("User wallet address:", user.wallet_address)
+        print("User role:", user.role)
 
+        try:
+            # Log the wallet address and Algorand client setup
+            logger.info(f"Fetching account info for address: {user.wallet_address}")
+            print(f"Fetching account info for wallet address: {user.wallet_address}")
+            
+            # Fetch balance from Algorand
+            account_info = algod_client.account_info(user.wallet_address)
+            print("Account info retrieved:", account_info)
+            
+            # Calculate balance in Algos
+            balance = account_info.get("amount", 0) / 1_000_000  # Convert from microAlgos to Algos
+            user_profile["balance"] = balance
+            print("Balance in Algos:", balance)
+
+            # Role-specific data
             if user.role == CustomUser.TAILOR:
                 user_profile["tailor_specific_field"] = "Tailor details here"
+                print("Adding tailor-specific details")
             elif user.role == CustomUser.CUSTOMER:
                 user_profile["customer_specific_field"] = "Customer details here"
+                print("Adding customer-specific details")
 
+            print("User profile data prepared:", user_profile)
             return Response(user_profile, status=200)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            logger.error(f"Error fetching user profile: {str(e)}")
+            print("Error fetching user profile:", str(e))
+            return Response({"error": "An error occurred while fetching user profile."}, status=500)
 
+   
+        
 class EditMeasurementView(APIView):
     permission_classes = [IsAuthenticated]
 

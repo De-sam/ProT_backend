@@ -87,14 +87,6 @@ class PasswordResetRequestView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-{
-    "first_name": "John",
-    "last_name": "Doe",
-    "email": "johndoe@example.com",
-    "password1": "password123",
-    "password2": "password123"
-}
-
 
 
 class PasswordResetConfirmView(APIView):
